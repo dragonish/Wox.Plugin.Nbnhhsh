@@ -13,9 +13,9 @@
     "Entry": "nbnhhsh_main.py",
     "Icon": "relative:images/icon.png",
     "SupportedOS": [
-        "windows",
-        "linux",
-        "darwin"
+        "Windows",
+        "Linux",
+        "Darwin"
     ],
     "Features": [
         {
