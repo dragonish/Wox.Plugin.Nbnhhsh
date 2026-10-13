@@ -10,7 +10,7 @@
     "MinWoxVersion": "2.0.0",
     "Runtime": "python",
     "Website": "https://github.com/dragonish/Wox.Plugin.Nbnhhsh",
-    "Entry": "main.py",
+    "Entry": "nbnhhsh_main.py",
     "Icon": "relative:images/icon.png",
     "SupportedOS": [
         "windows",

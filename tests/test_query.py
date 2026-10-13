@@ -3,7 +3,7 @@ import unittest
 
 from wox_plugin import Context, Query, QueryEnv, QueryType, Selection
 
-from src.main import Nbnhhsh
+from src.nbnhhsh_main import Nbnhhsh
 
 
 class TestNbnhhsh(unittest.TestCase):

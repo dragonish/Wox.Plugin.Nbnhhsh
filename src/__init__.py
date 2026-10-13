@@ -1,4 +1,4 @@
-from .main import Nbnhhsh
+from .nbnhhsh_main import Nbnhhsh
 
 __version__ = "0.1.0"
 __all__ = ["Nbnhhsh"]

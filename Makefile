@@ -59,7 +59,7 @@ ifeq ($(OS),Windows_NT)
 	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -Directory -Recurse | Where-Object { $$_.Name -like '*.dist-info' -or $$_.Name -like '*.egg-info' } | Remove-Item -Recurse -Force
 	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -File -Recurse | Where-Object { $$_.Name -like '__editable__*' -or $$_.Name -eq '.lock' -or $$_.Name -like '*__mypyc*' } | Remove-Item -Force
 	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -Directory -Recurse | Sort-Object FullName -Descending | Where-Object { $$_.Name -like '*mypy*' -or $$_.Name -eq 'ruff' -or $$_.Name -eq 'bin' } | Remove-Item -Recurse -Force
-	Set-Content -Path '$(DIST_DIR)\__init__.py' -Encoding ascii -Value @('import os','import sys','','# Add dependencies directory to Python path','deps_dir = os.path.join(os.path.dirname(__file__), "dependencies")','if deps_dir not in sys.path:','    sys.path.insert(0, deps_dir)','','from .main import plugin','','__all__ = ["plugin"]')
+	Set-Content -Path '$(DIST_DIR)\__init__.py' -Encoding ascii -Value @('import os','import sys','','# Add dependencies directory to Python path','deps_dir = os.path.join(os.path.dirname(__file__), "dependencies")','if deps_dir not in sys.path:','    sys.path.insert(0, deps_dir)','','from .nbnhhsh_main import plugin','','__all__ = ["plugin"]')
 	Copy-Item 'plugin.json' -Destination '$(DIST_DIR)\plugin.json' -Force
 	New-Item -ItemType Directory -Force -Path '$(DIST_DIR)\images' | Out-Null
 	Copy-Item 'images\*' -Destination '$(DIST_DIR)\images' -Recurse -Force
@@ -73,7 +73,7 @@ else
 	find $(DIST_DIR)/dependencies \( -type d -name "*.dist-info" -o -type d -name "*.egg-info" \) -exec rm -rf {} +
 	find $(DIST_DIR)/dependencies \( -type f -name "__editable__*" -o -type f -name ".lock" \) -exec rm -f {} +
 	rm -rf $(DIST_DIR)/dependencies/*mypy* $(DIST_DIR)/dependencies/ruff $(DIST_DIR)/dependencies/bin
-	printf '%s\n' 'import os' 'import sys' '' '# Add dependencies directory to Python path' 'deps_dir = os.path.join(os.path.dirname(__file__), "dependencies")' 'if deps_dir not in sys.path:' '    sys.path.insert(0, deps_dir)' '' 'from .main import plugin' '' '__all__ = ["plugin"]' > $(DIST_DIR)/__init__.py
+	printf '%s\n' 'import os' 'import sys' '' '# Add dependencies directory to Python path' 'deps_dir = os.path.join(os.path.dirname(__file__), "dependencies")' 'if deps_dir not in sys.path:' '    sys.path.insert(0, deps_dir)' '' 'from .nbnhhsh_main import plugin' '' '__all__ = ["plugin"]' > $(DIST_DIR)/__init__.py
 	cp plugin.json $(DIST_DIR)/plugin.json
 	mkdir -p $(DIST_DIR)/images
 	cp images/* $(DIST_DIR)/images/
