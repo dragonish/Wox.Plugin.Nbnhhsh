@@ -1,15 +1,15 @@
 {
-    "Id": "{{.Id}}",
+    "Id": "44ebc063-a997-473b-a70e-885fa28170ee",
     "TriggerKeywords": [
-        "{{.TriggerKeyword}}"
+        "sx"
     ],
-    "Name": "{{.Name}}",
-    "Description": "{{.Description}}",
-    "Author": "{{.Author}}",
+    "Name": "Nbnhhsh",
+    "Description": "「能不能好好说话？」 Wox 插件",
+    "Author": "dragonish",
     "Version": "0.0.1",
     "MinWoxVersion": "2.0.0",
     "Runtime": "python",
-    "Website": "{{.Website}}",
+    "Website": "https://github.com/dragonish/Wox.Plugin.Nbnhhsh",
     "Entry": "main.py",
     "Icon": "relative:images/app.svg",
     "SupportedOS": [
