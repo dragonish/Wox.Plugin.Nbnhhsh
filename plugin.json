@@ -4,17 +4,25 @@
         "sx"
     ],
     "Name": "Nbnhhsh",
-    "Description": "「能不能好好说话？」 Wox 插件",
+    "Description": "「能不能好好说话？」拼音首字母缩写翻译工具",
     "Author": "dragonish",
     "Version": "0.0.1",
     "MinWoxVersion": "2.0.0",
     "Runtime": "python",
     "Website": "https://github.com/dragonish/Wox.Plugin.Nbnhhsh",
     "Entry": "main.py",
-    "Icon": "relative:images/app.svg",
+    "Icon": "relative:images/icon.png",
     "SupportedOS": [
         "windows",
         "linux",
         "darwin"
+    ],
+    "Features": [
+        {
+            "Name": "debounce",
+            "Params": {
+                "IntervalMs": "300"
+            }
+        }
     ]
 }

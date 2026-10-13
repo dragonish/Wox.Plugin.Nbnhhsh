@@ -128,7 +128,7 @@ wheels = [
 ]
 
 [[package]]
-name = "wox-plugin-template-python"
+name = "wox-plugin-nbnhhsh"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [

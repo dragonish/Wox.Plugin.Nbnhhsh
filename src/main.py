@@ -1,56 +1,157 @@
+import asyncio
+import json
+import re
+import urllib.error
+import urllib.request
+import webbrowser
+
 from wox_plugin import (
     ActionContext,
     Context,
-    LogLevel,
-    Plugin,
+    CopyParams,
+    CopyType,
     PluginInitParams,
-    PublicAPI,
     Query,
+    QueryResponse,
     Result,
     ResultAction,
     WoxImage,
-    WoxImageType,
 )
 
+HOMEPAGE = "https://lab.magiconch.com"
+GUESS_API = HOMEPAGE + "/api/nbnhhsh/guess"
 
-class MyPlugin(Plugin):
-    api: PublicAPI
+# "能不能好好说话（nbnhhsh）" -> ("能不能好好说话", "nbnhhsh")
+_TRAN_RE = re.compile(r"^(.+?)([（(](.*)[)）])?$")
 
-    async def init(self, ctx: Context, init_params: PluginInitParams) -> None:
-        self.api = init_params.api
+_ICON_TRANS = WoxImage.new_relative("images/trans.png")
+_ICON_INPUTTING = WoxImage.new_relative("images/inputting.png")
+_ICON_LINK = WoxImage.new_relative("images/link.png")
+_ICON_ERROR = WoxImage.new_relative("images/error.png")
 
-    async def action(self, ctx: Context, actionContext: ActionContext):
-        await self.api.log(ctx, LogLevel.INFO, actionContext.context_data.get("search_term", ""))
-        await self.api.notify(ctx, "Action executed!")
 
-    async def query(self, ctx: Context, query: Query) -> list[Result]:
-        results: list[Result] = []
-        search_term = query.search.lower() if query.search else ""
+def _post_guess(text):
+    """同步 POST，放到线程池里跑，避免阻塞插件的事件循环。"""
+    body = json.dumps({"text": text}).encode("utf-8")
+    req = urllib.request.Request(
+        GUESS_API,
+        data=body,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
 
-        results.append(
-            Result(
-                title=f"you typed {search_term}",
-                sub_title="this is subsitle",
-                icon=WoxImage(
-                    image_type=WoxImageType.RELATIVE,
-                    image_data="images/app.svg",
-                ),
-                actions=[
-                    ResultAction(
-                        name="My Action",
-                        icon=WoxImage(
-                            image_type=WoxImageType.RELATIVE,
-                            image_data="images/app.svg",
-                        ),
-                        prevent_hide_after_action=True,
-                        context_data={"search_term": search_term},
-                        action=self.action,
-                    )
-                ],
-            )
+
+def _parse_tran(tran):
+    m = _TRAN_RE.match(tran)
+    if m and m.group(1):
+        return m.group(1), m.group(3) or ""
+    return tran, ""
+
+
+class Nbnhhsh:
+    async def init(self, ctx: Context, params: PluginInitParams) -> None:
+        self.api = params.api
+
+    async def _copy(self, ctx: Context, text: str) -> None:
+        await self.api.copy(ctx, CopyParams(type=CopyType.TEXT, text=text))
+
+    def _copy_action(self, name: str, text: str, is_default: bool = True) -> ResultAction:
+        async def _do(ctx: Context, ac: ActionContext) -> None:
+            await self._copy(ctx, text)
+
+        return ResultAction(
+            name=name,
+            icon=WoxImage.new_emoji("📋"),
+            is_default=is_default,
+            action=_do,
         )
 
-        return results
+    def _open_url_action(self, name: str, url: str) -> ResultAction:
+        async def _do(ctx: Context, ac: ActionContext) -> None:
+            webbrowser.open(url)
+
+        return ResultAction(
+            name=name,
+            icon=WoxImage.new_emoji("🔗"),
+            is_default=True,
+            action=_do,
+        )
+
+    def _submit_result(self, text: str) -> Result:
+        return Result(
+            title=f"[尚未录入对应文字: {text}]",
+            sub_title="访问网站提交对应文字",
+            icon=_ICON_LINK,
+            score=0,
+            actions=[
+                self._open_url_action("访问网站提交", f"{HOMEPAGE}/nbnhhsh/#/text/{text}"),
+            ],
+        )
+
+    def _error_result(self, text: str, error: str) -> Result:
+        return Result(
+            title=error,
+            sub_title="访问网站查看详情",
+            icon=_ICON_ERROR,
+            score=0,
+            actions=[
+                self._open_url_action("访问网站", f"{HOMEPAGE}/nbnhhsh/#/text/{text}"),
+            ],
+        )
+
+    async def query(self, ctx: Context, query: Query) -> QueryResponse:
+        text = (query.search or "").strip()
+        if len(text) < 2:
+            return QueryResponse(results=[])
+
+        try:
+            items = await asyncio.get_running_loop().run_in_executor(None, _post_guess, text)
+        except urllib.error.HTTPError as e:
+            return QueryResponse(results=[self._error_result(text, f"[网络错误，代码: {e.code}]")])
+        except Exception as e:  # 超时、DNS 解析失败等
+            return QueryResponse(results=[self._error_result(text, f"[网络错误: {e}]")])
+
+        if not items:
+            return QueryResponse(results=[])
+
+        # Wox 按 score 降序展示结果；score 相同时会再按标题码位排序，
+        # 因此按接口顺序赋递减 score，把顺序编码进分数里。
+        # 从 max(结果数, 100) 起手递减：数量再多也不并列、不溢出。
+        score = max(len(items), 100)
+        results = []
+        for item in items:
+            name = item.get("name", "")
+            for tran in item.get("trans") or []:
+                parsed, sub = _parse_tran(tran)
+                results.append(
+                    Result(
+                        title=parsed,
+                        sub_title=sub or name,
+                        icon=_ICON_TRANS,
+                        score=score,
+                        actions=[
+                            self._copy_action("复制", parsed),
+                            self._copy_action("复制原始内容", tran, is_default=False),
+                        ],
+                    )
+                )
+                score = max(1, score - 1)
+            for guess in item.get("inputting") or []:
+                results.append(
+                    Result(
+                        title=guess,
+                        sub_title="可能的结果",
+                        icon=_ICON_INPUTTING,
+                        score=score,
+                        actions=[self._copy_action("复制", guess)],
+                    )
+                )
+                score = max(1, score - 1)
+
+        results.append(self._submit_result(text))
+        return QueryResponse(results=results)
 
 
-plugin = MyPlugin()
+plugin = Nbnhhsh()

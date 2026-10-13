@@ -1,15 +1,27 @@
+import asyncio
 import unittest
 
-from src.main import MyPlugin
+from wox_plugin import Context, Query, QueryEnv, QueryType, Selection
+
+from src.main import Nbnhhsh
 
 
-class TestMyPlugin(unittest.TestCase):
+class TestNbnhhsh(unittest.TestCase):
     def setUp(self):
-        self.plugin = MyPlugin()
+        self.plugin = Nbnhhsh()
 
     def test_query(self):
-        results = self.plugin.query(None, {"search": "test"})
-        self.assertIsNotNone(results)
+        query = Query(
+            id="test",
+            type=QueryType.INPUT,
+            raw_query="test",
+            selection=Selection(),
+            env=QueryEnv(),
+            search="test",
+        )
+        response = asyncio.run(self.plugin.query(Context.new(), query))
+        self.assertTrue(response.results)
+        self.assertFalse(response.results[0].title.startswith("[网络错误"))
 
 
 if __name__ == "__main__":
