@@ -57,7 +57,7 @@ ifeq ($(OS),Windows_NT)
 	Remove-Item -Force 'requirements.txt'
 	Copy-Item '$(SRC_DIR)\*' -Destination '$(DIST_DIR)' -Recurse -Force
 	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -Directory -Recurse | Where-Object { $$_.Name -like '*.dist-info' -or $$_.Name -like '*.egg-info' } | Remove-Item -Recurse -Force
-	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -File -Recurse | Where-Object { $$_.Name -like '__editable__*' -or $$_.Name -eq '.lock' } | Remove-Item -Force
+	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -File -Recurse | Where-Object { $$_.Name -like '__editable__*' -or $$_.Name -eq '.lock' -or $$_.Name -like '*__mypyc*' } | Remove-Item -Force
 	Get-ChildItem -Path '$(DIST_DIR)\dependencies' -Directory -Recurse | Sort-Object FullName -Descending | Where-Object { $$_.Name -like '*mypy*' -or $$_.Name -eq 'ruff' -or $$_.Name -eq 'bin' } | Remove-Item -Recurse -Force
 	Set-Content -Path '$(DIST_DIR)\__init__.py' -Encoding ascii -Value @('import os','import sys','','# Add dependencies directory to Python path','deps_dir = os.path.join(os.path.dirname(__file__), "dependencies")','if deps_dir not in sys.path:','    sys.path.insert(0, deps_dir)','','from .main import plugin','','__all__ = ["plugin"]')
 	Copy-Item 'plugin.json' -Destination '$(DIST_DIR)\plugin.json' -Force
