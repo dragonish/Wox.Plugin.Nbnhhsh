@@ -15,6 +15,8 @@ from wox_plugin import (
     QueryResponse,
     Result,
     ResultAction,
+    ResultTail,
+    ResultTailType,
     WoxImage,
 )
 
@@ -79,6 +81,12 @@ class Nbnhhsh:
             action=_do,
         )
 
+    def _name_tail(self, name: str) -> list[ResultTail]:
+        """把原始缩写名固定在结果尾部，与 sub_title 的含义区分开。"""
+        if not name:
+            return []
+        return [ResultTail(type=ResultTailType.TEXT, text=name, id="name")]
+
     def _submit_result(self, text: str) -> Result:
         return Result(
             title=f"[尚未录入对应文字: {text}]",
@@ -128,9 +136,10 @@ class Nbnhhsh:
                 results.append(
                     Result(
                         title=parsed,
-                        sub_title=sub or name,
+                        sub_title=sub,
                         icon=_ICON_TRANS,
                         score=score,
+                        tails=self._name_tail(name),
                         actions=[
                             self._copy_action("复制", parsed),
                             self._copy_action("复制原始内容", tran, is_default=False),
@@ -145,6 +154,7 @@ class Nbnhhsh:
                         sub_title="可能的结果",
                         icon=_ICON_INPUTTING,
                         score=score,
+                        tails=self._name_tail(name),
                         actions=[self._copy_action("复制", guess)],
                     )
                 )
