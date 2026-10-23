@@ -24,5 +24,17 @@
                 "IntervalMs": "300"
             }
         }
+    ],
+    "SettingDefinitions": [
+        {
+            "Type": "checkbox",
+            "Value": {
+                "Key": "enable_preview",
+                "Label": "预览展示全部释义",
+                "DefaultValue": "false",
+                "Tooltip": "开启后，结果右侧会显示该缩写的全部释义和可能的结果",
+                "Style": {}
+            }
+        }
     ]
 }
