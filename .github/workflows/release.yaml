@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Package plugin
+        run: make package
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            wox.plugin.*.wox
+      - name: Create changelog text
+        id: changelog_text
+        uses: dragonish/tag-changelog@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/scripts/tag-changelog-config.cjs
+      - name: Get git tags
+        id: git_tags
+        run: |
+          current=$(git describe --abbrev=0 --tags)
+          echo "current=${current}" >> ${GITHUB_OUTPUT}
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release ${{ steps.git_tags.outputs.current }}
+          prerelease: false
+          draft: false
+          artifacts: "wox.plugin.*.wox"
+          body: ${{ steps.changelog_text.outputs.changes }}
