@@ -2,43 +2,43 @@ module.exports = {
   types: [
     {
       types: ["feat"],
-      label: "Features",
+      label: "新功能",
     },
     {
       types: ["fix"],
-      label: "Bug Fixes",
+      label: "问题修复",
     },
     {
       types: ["perf"],
-      label: "Performance Improvements",
+      label: "性能优化",
     },
     {
       types: ["enh"],
-      label: "Enhancements",
+      label: "功能增强",
     },
     {
       types: ["tweak"],
-      label: "Refinements",
+      label: "功能改进",
     },
     {
       types: ["adjust"],
-      label: "Adjustments",
+      label: "功能调整",
     },
     {
       types: ["simplify"],
-      label: "Simplifications",
+      label: "功能简化",
     },
     {
       types: ["deprecate"],
-      label: "Deprecations",
+      label: "功能弃用",
     },
     {
       types: ["ui"],
-      label: "UI Improvements",
+      label: "界面优化",
     },
     {
       types: ["security"],
-      label: "Security Fixes",
+      label: "安全修复",
     },
   ],
   excludeTypes: [
