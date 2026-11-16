@@ -7,7 +7,7 @@
     "Description": "「能不能好好说话？」拼音首字母缩写翻译工具",
     "Author": "dragonish",
     "Version": "1.2.0",
-    "MinWoxVersion": "2.0.4",
+    "MinWoxVersion": "2.4.0",
     "Runtime": "python",
     "Website": "https://github.com/dragonish/Wox.Plugin.Nbnhhsh",
     "Entry": "nbnhhsh_main.py",

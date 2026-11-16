@@ -12,13 +12,16 @@ from wox_plugin import (
     Context,
     CopyParams,
     CopyType,
+    LogLevel,
     PluginInitParams,
     Query,
     QueryResponse,
+    RefreshQueryParam,
     Result,
     ResultAction,
     ResultTail,
     ResultTailType,
+    SetSettingOption,
     WoxImage,
     WoxPreview,
     WoxPreviewScrollPosition,
@@ -39,6 +42,27 @@ _ICON_TRANS = WoxImage.new_relative("images/trans.png")
 _ICON_INPUTTING = WoxImage.new_relative("images/inputting.png")
 _ICON_LINK = WoxImage.new_relative("images/link.png")
 _ICON_ERROR = WoxImage.new_relative("images/error.png")
+
+# 动作面板图标必须是内联 SVG：Wox 只会给 ImageType 为 svg 且包含
+# var(--wox-theme-icon-color) 的图标套用行文字色与选中态颜色。
+_PREVIEW_SHOW_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" '
+    'fill="none" stroke="var(--wox-theme-icon-color)" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>'
+    '<circle cx="12" cy="12" r="3"/></svg>'
+)
+_PREVIEW_HIDE_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" '
+    'fill="none" stroke="var(--wox-theme-icon-color)" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="m2 2 20 20"/>'
+    '<path d="M6.71 6.71A10.5 10.5 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 5.29-1.44"/>'
+    '<path d="M10.58 10.58a2 2 0 0 0 2.84 2.84"/>'
+    '<path d="M9.88 5.09A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.16 4.19"/></svg>'
+)
+_ICON_PREVIEW_SHOW = WoxImage.new_svg(_PREVIEW_SHOW_SVG)
+_ICON_PREVIEW_HIDE = WoxImage.new_svg(_PREVIEW_HIDE_SVG)
 
 # 缓存最近的查询结果，避免重复输入时反复请求接口。
 _CACHE_TTL = 60.0
@@ -103,11 +127,24 @@ def _parse_tran(tran):
 
 
 class Nbnhhsh:
+    def __init__(self) -> None:
+        # 最近一次成功查询的 (关键词, 结果)，切换预览前用它预热缓存。
+        self._last_success: tuple[str, list] | None = None
+
     async def init(self, ctx: Context, params: PluginInitParams) -> None:
         self.api = params.api
 
     async def _copy(self, ctx: Context, text: str) -> None:
         await self.api.copy(ctx, CopyParams(type=CopyType.TEXT, text=text))
+
+    async def _log_error(self, ctx: Context, msg: str) -> None:
+        api = getattr(self, "api", None)
+        if api is None:
+            return
+        try:
+            await api.log(ctx, LogLevel.ERROR, msg)
+        except Exception:  # 日志失败不应影响主流程
+            pass
 
     async def _preview_enabled(self, ctx: Context) -> bool:
         """读取「预览展示全部释义」开关；未初始化或读取失败时按关闭处理。"""
@@ -119,6 +156,55 @@ class Nbnhhsh:
         except Exception:  # 旧版 Wox 或设置读取失败时不启用
             return False
         return str(value).strip().lower() == "true"
+
+    async def _set_preview_enabled(self, ctx: Context, enabled: bool) -> None:
+        """写入「预览展示全部释义」开关，并刷新当前查询让预览立即生效。"""
+        api = getattr(self, "api", None)
+        if api is None:
+            return
+
+        # 预热缓存，避免刷新时因 TTL 过期而重新请求接口。
+        if self._last_success:
+            _cache_set(*self._last_success)
+
+        try:
+            result = await api.set_setting(
+                ctx,
+                SetSettingOption(
+                    key=SETTING_ENABLE_PREVIEW,
+                    value="true" if enabled else "false",
+                    platform_specific=False,
+                    is_local=False,
+                ),
+            )
+        except Exception as e:  # 旧版 Wox 或设置写入失败
+            await self._log_error(ctx, f"保存预览设置失败: {e}")
+            return
+
+        if not result.success:
+            await self._log_error(ctx, f"保存预览设置失败: {result.errmsg}")
+            return
+
+        try:
+            await api.refresh_query(ctx, RefreshQueryParam(preserve_selected_index=True))
+        except Exception as e:
+            await self._log_error(ctx, f"刷新查询失败: {e}")
+
+    def _preview_toggle_action(self, enabled: bool) -> ResultAction:
+        """按当前设置生成「展示/隐藏全部释义」动作，名称表示点击后的目标状态。"""
+        name = "隐藏全部释义" if enabled else "展示全部释义"
+        target = not enabled
+
+        async def _do(ctx: Context, ac: ActionContext) -> None:
+            await self._set_preview_enabled(ctx, target)
+
+        return ResultAction(
+            name=name,
+            icon=_ICON_PREVIEW_HIDE if enabled else _ICON_PREVIEW_SHOW,
+            is_default=False,
+            prevent_hide_after_action=True,
+            action=_do,
+        )
 
     def _copy_action(self, name: str, text: str, is_default: bool = True) -> ResultAction:
         async def _do(ctx: Context, ac: ActionContext) -> None:
@@ -189,6 +275,7 @@ class Nbnhhsh:
         if not items:
             return QueryResponse(results=[])
 
+        self._last_success = (text, items)
         preview_enabled = await self._preview_enabled(ctx)
 
         # Wox 按 score 降序展示结果；score 相同时会再按标题码位排序，
@@ -214,6 +301,7 @@ class Nbnhhsh:
                         actions=[
                             self._copy_action("复制", parsed),
                             self._copy_action("复制原始内容", tran, is_default=False),
+                            self._preview_toggle_action(preview_enabled),
                         ],
                     )
                 )
@@ -227,7 +315,10 @@ class Nbnhhsh:
                         preview=preview,
                         score=score,
                         tails=self._name_tail(name),
-                        actions=[self._copy_action("复制", guess)],
+                        actions=[
+                            self._copy_action("复制", guess),
+                            self._preview_toggle_action(preview_enabled),
+                        ],
                     )
                 )
                 score = max(1, score - 1)
