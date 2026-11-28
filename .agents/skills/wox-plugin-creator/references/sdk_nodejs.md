@@ -55,7 +55,7 @@ Return refinements on `QueryResponse.Refinements`. Read selected values from `qu
 interface QueryRefinement {
   Id: string;
   Title: string;
-  Type: "singleSelect" | "multiSelect" | "toggle" | "sort";
+  Type: "singleSelect" | "multiSelect" | "toggle" | "sort"; // "sort" is deprecated. Use "singleSelect".
   Options: QueryRefinementOption[];
   DefaultValue?: string[];
   Hotkey: string; // e.g. cmd+shift+t on macOS, ctrl+shift+t on Windows/Linux
@@ -151,7 +151,7 @@ Prefer these APIs for user settings. A normal write syncs across machines throug
 ### UI Updates
 
 - `UpdateResult(ctx, result: UpdatableResult)`: Update one visible result in place. Keep the same `Id`. See `SKILL.md`.
-- `PushResults(ctx, query, results)`: Append results to the current list.
+- `PushResults(ctx, query, results)`: Append results for the original query. The return value tells you whether Wox accepted the batch. See [query lifetimes and cancellation](query_lifecycle.md).
 - `RefreshQuery(ctx, param)`: Re-run the current query. Use only when rows must be added or removed. See `SKILL.md`.
 - `GetUpdatableResult(ctx, resultId)`: Get current state of a result.
 

@@ -41,7 +41,7 @@ class Query:
 class QueryRefinement:
     id: str
     title: str
-    type: QueryRefinementType  # singleSelect | multiSelect | toggle | sort
+    type: QueryRefinementType  # SINGLE_SELECT, MULTI_SELECT, or TOGGLE. SORT is deprecated; use SINGLE_SELECT.
     hotkey: str  # e.g. cmd+shift+t on macOS, ctrl+shift+t on Windows/Linux
     options: list[QueryRefinementOption]
     default_value: list[str] = []
@@ -119,7 +119,7 @@ Prefer these APIs for user settings. A normal write syncs across machines throug
 ### UI Updates
 
 - `update_result(ctx, result: UpdatableResult)`: Update one visible result in place. Keep the same id. See `SKILL.md`.
-- `push_results(ctx, query, results)`: Append results.
+- `push_results(ctx, query, results)`: Append results for the original query. The return value tells you whether Wox accepted the batch. See [query lifetimes and cancellation](query_lifecycle.md).
 - `refresh_query(ctx, param)`: Re-run the current query. Use only when rows must be added or removed. See `SKILL.md`.
 - `get_updatable_result(ctx, result_id)`: Get current result state.
 
